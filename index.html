@@ -3,127 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>純白意志：WRX VB 戰備金模擬器</title>
+    <title>純白意志：WRX VB 總體戰略中控台</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,00,0,0.1); margin-bottom: 20px; }
-        h1 { text-align: center; color: #2c3e50; }
-        .result-box { display: flex; justify-content: space-around; background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 1.2em; color: #0056b3; }
-        .control-group { margin-bottom: 15px; }
-        label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
-        input[type=range] { width: 100%; cursor: pointer; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; color: #2c3e50; padding: 20px; max-width: 900px; margin: 0 auto; line-height: 1.6; }
+        h1 { text-align: center; color: #1a252f; margin-bottom: 30px; }
+        .grid-container { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        @media(min-width: 768px) { .grid-container { grid-template-columns: 1fr 1fr; } }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .summary-box { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; text-align: center; }
+        .summary-box h2 { margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; opacity: 0.9; }
+        .summary-box .big-num { font-size: 2.5em; font-weight: bold; margin-bottom: 15px; }
+        .stats-row { display: flex; justify-content: space-between; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; }
+        
+        .control-group { margin-bottom: 20px; }
+        label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; font-size: 0.95em; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #3498db; }
+        input[type=number] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
+        
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background-color: #3498db; color: white; margin-bottom: 10px; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-danger { background-color: #e74c3c; color: white; opacity: 0.9; }
+        .btn-danger:hover { opacity: 1; }
+        
+        .history-list { margin-top: 15px; max-height: 150px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 10px; font-size: 0.9em; }
+        .history-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #eee; }
+        .chart-container { margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <h1>🏎️ WRX VB 戰備金模擬器</h1>
+    <h1>🏎️ WRX VB 總體戰略中控台</h1>
 
-    <div class="card result-box">
-        <div>每月淨存：<span id="netSavingsDisplay">30,500</span> 元</div>
-        <div>預計達標：<span id="monthsToTargetDisplay">29.2</span> 個月</div>
-    </div>
-
-    <div class="card">
-        <div class="control-group">
-            <label>打工月薪 <span id="valIncome">30,000 元</span></label>
-            <input type="range" id="inputIncome" min="20000" max="50000" step="1000" value="30000">
-        </div>
-        <div class="control-group">
-            <label>每月租金收入 <span id="valRent">10,500 元</span></label>
-            <input type="range" id="inputRent" min="0" max="20000" step="500" value="10500">
-        </div>
-        <div class="control-group">
-            <label>每月生活開銷 <span id="valExpenses">10,000 元</span></label>
-            <input type="range" id="inputExpenses" min="5000" max="20000" step="1000" value="10000">
+    <div class="card summary-box">
+        <h2>目前總戰備金</h2>
+        <div class="big-num"><span id="displayCurrentTotal">30,500</span> 元</div>
+        <div class="stats-row">
+            <span>預估每月淨存：<span id="displayProjectedNet">30,500</span></span>
+            <span>距離 89 萬還需：<span id="displayRemainingMonths">28.2</span> 個月</span>
         </div>
     </div>
 
-    <div class="card">
-        <canvas id="savingsChart"></canvas>
+    <div class="grid-container">
+        <div class="card">
+            <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 5px;">📝 實戰記帳區</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d;">每月發薪/收租後，輸入實際存下來的金額。</p>
+            
+            <input type="number" id="inputActual" placeholder="例如：30500" min="0">
+            <button class="btn-primary" onclick="addRecord()">新增本月紀錄</button>
+            <button class="btn-danger" onclick="resetData()">重置所有資料</button>
+            
+            <div class="history-list" id="historyContainer">
+                </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0; border-bottom: 2px solid #e67e22; padding-bottom: 5px;">🔮 未來推演參數</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d;">調整下方變數，預測未來的達標曲線。</p>
+            
+            <div class="control-group">
+                <label>預估打工月薪 <span id="valIncome">30,000 元</span></label>
+                <input type="range" id="inputIncome" min="20000" max="50000" step="1000" value="30000" oninput="updateSimulation()">
+            </div>
+            <div class="control-group">
+                <label>預估租金收入 <span id="valRent">10,500 元</span></label>
+                <input type="range" id="inputRent" min="0" max="20000" step="500" value="10500" oninput="updateSimulation()">
+            </div>
+            <div class="control-group">
+                <label>預估每月開銷 <span id="valExpenses">10,000 元</span></label>
+                <input type="range" id="inputExpenses" min="5000" max="20000" step="1000" value="10000" oninput="updateSimulation()">
+            </div>
+        </div>
+    </div>
+
+    <div class="card chart-container">
+        <canvas id="strategyChart"></canvas>
     </div>
 
     <script>
+        // --- 系統核心狀態 ---
         const targetFund = 890000;
+        let actualHistory = [{ month: 1, amount: 30500 }]; // 預載第一個月的計畫
+        let currentTotal = 30500;
         let chartInstance = null;
 
-        const inputs = {
-            income: document.getElementById('inputIncome'),
-            rent: document.getElementById('inputRent'),
-            expenses: document.getElementById('inputExpenses')
-        };
+        // --- 介面更新邏輯 ---
+        function updateSimulation() {
+            // 取得滑桿數值
+            const inc = parseInt(document.getElementById('inputIncome').value);
+            const rnt = parseInt(document.getElementById('inputRent').value);
+            const exp = parseInt(document.getElementById('inputExpenses').value);
 
-        const displays = {
-            income: document.getElementById('valIncome'),
-            rent: document.getElementById('valRent'),
-            expenses: document.getElementById('valExpenses'),
-            net: document.getElementById('netSavingsDisplay'),
-            months: document.getElementById('monthsToTargetDisplay')
-        };
+            // 更新文字顯示
+            document.getElementById('valIncome').innerText = inc.toLocaleString() + ' 元';
+            document.getElementById('valRent').innerText = rnt.toLocaleString() + ' 元';
+            document.getElementById('valExpenses').innerText = exp.toLocaleString() + ' 元';
 
-        function updateDashboard() {
-            const income = parseInt(inputs.income.value);
-            const rent = parseInt(inputs.rent.value);
-            const expenses = parseInt(inputs.expenses.value);
+            // 計算預測淨利
+            const projectedNet = inc + rnt - exp;
+            document.getElementById('displayProjectedNet').innerText = projectedNet.toLocaleString() + ' 元';
 
-            displays.income.innerText = income.toLocaleString() + ' 元';
-            displays.rent.innerText = rent.toLocaleString() + ' 元';
-            displays.expenses.innerText = expenses.toLocaleString() + ' 元';
-
-            const netSavings = income + rent - expenses;
-            displays.net.innerText = netSavings.toLocaleString();
-
-            const months = netSavings > 0 ? (targetFund / netSavings).toFixed(1) : '∞';
-            displays.months.innerText = months;
-
-            updateChart(netSavings);
-        }
-
-        function updateChart(netSavings) {
-            const labels = [];
-            const data = [];
-            const targetData = [];
-            let currentFund = 0;
-
-            for (let i = 1; i <= 40; i++) {
-                labels.push('第 ' + i + ' 個月');
-                currentFund += netSavings;
-                data.push(currentFund);
-                targetData.push(targetFund);
-            }
-
-            if (chartInstance) {
-                chartInstance.data.datasets[0].data = data;
-                chartInstance.update();
+            // 計算剩餘月數
+            const remainingMoney = targetFund - currentTotal;
+            let remainingMonths = 0;
+            
+            if (remainingMoney <= 0) {
+                document.getElementById('displayRemainingMonths').innerText = '0 (已達標！)';
+                document.getElementById('displayRemainingMonths').style.color = '#f1c40f';
             } else {
-                const ctx = document.getElementById('savingsChart').getContext('2d');
-                chartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: '累積資金 (元)',
-                            data: data,
-                            borderColor: '#007bff',
-                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                            fill: true,
-                            tension: 0.1
-                        }, {
-                            label: '89萬 WRX 戰備金目標',
-                            data: targetData,
-                            borderColor: '#dc3545',
-                            borderDash: [5, 5],
-                            pointRadius: 0,
-                            fill: false
-                        }]
-                    },
-                    options: { responsive: true, scales: { y: { beginAtZero: true } } }
-                });
+                remainingMonths = projectedNet > 0 ? (remainingMoney / projectedNet).toFixed(1) : '∞';
+                document.getElementById('displayRemainingMonths').innerText = remainingMonths;
+                document.getElementById('displayRemainingMonths').style.color = 'white';
+            }
+
+            // 更新總金額顯示
+            document.getElementById('displayCurrentTotal').innerText = currentTotal.toLocaleString();
+
+            // 重新繪製圖表與歷史清單
+            renderHistory();
+            drawChart(projectedNet);
+        }
+
+        // --- 新增紀錄 ---
+        function addRecord() {
+            const inputEl = document.getElementById('inputActual');
+            const val = parseInt(inputEl.value);
+            
+            if (isNaN(val) || val <= 0) {
+                alert('請輸入大於 0 的有效金額！');
+                return;
+            }
+
+            const nextMonth = actualHistory.length + 1;
+            actualHistory.push({ month: nextMonth, amount: val });
+            currentTotal += val;
+            
+            inputEl.value = ''; // 清空輸入框
+            updateSimulation(); // 觸發全域更新
+        }
+
+        // --- 重置資料 ---
+        function resetData() {
+            if(confirm('確定要清空所有真實儲蓄紀錄，從零開始嗎？')) {
+                actualHistory = [];
+                currentTotal = 0;
+                updateSimulation(); // 觸發全域更新
             }
         }
 
-        Object.values(inputs).forEach(input => input.addEventListener('input', updateDashboard));
-        updateDashboard(); // Initial load
+        // --- 渲染歷史清單 ---
+        function renderHistory() {
+            const container = document.getElementById('historyContainer');
+            container.innerHTML = '';
+            
+            if (actualHistory.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#999; padding: 10px;">尚無紀錄，準備存下第一筆資金吧！</div>';
+                return;
+            }
+
+            // 反向迴圈讓最新的在最上面
+            for (let i = actualHistory.length - 1; i >= 0; i--) {
+                const item = actualHistory[i];
+                container.innerHTML += `
+                    <div class="history-item">
+                        <span>第 ${item.month} 個月</span>
+                        <span style="color: #27ae60; font-weight: bold;">+ ${item.amount.toLocaleString()} 元</span>
+                    </div>
+                `;
+            }
+        }
+
+        // --- 繪製圖表核心 ---
+        function drawChart(projectedNet) {
+            let labels = [];
+            let dataActual = [];
+            let dataProjected = [];
+            let dataTarget = [];
+
+            let tempTotal = 0;
+
+            // 1. 建立真實進度線 (實線)
+            for (let i = 0; i < actualHistory.length; i++) {
+                tempTotal += actualHistory[i].amount;
+                labels.push('第 ' + (i + 1) + ' 個月');
+                dataActual.push(tempTotal);
+                dataProjected.push(null); // 保持陣列長度對齊
+                dataTarget.push(targetFund);
+            }
+
+            // 處理虛線與實線的連接點
+            let projTotal = tempTotal;
+            let startMonth = actualHistory.length;
+
+            if (actualHistory.length === 0) {
+                startMonth = 0;
+                projTotal = 0;
+            } else {
+                // 將虛線的最後一個 null 替換為當前總和，讓兩條線完美接合
+                dataProjected[dataProjected.length - 1] = tempTotal;
+            }
+
+            // 2. 建立未來預測線 (虛線)
+            let safeCounter = 0; // 防止無限迴圈
+            while (projTotal < targetFund && safeCounter < 60 && projectedNet > 0) {
+                startMonth++;
+                safeCounter++;
+                projTotal += projectedNet;
+                
+                labels.push('第 ' + startMonth + ' 個月');
+                dataActual.push(null);
+                dataProjected.push(projTotal);
+                dataTarget.push(targetFund);
+            }
+
+            // 繪製 Chart.js
+            const ctx = document.getElementById('strategyChart').getContext('2d');
+            
+            if (chartInstance) { chartInstance.destroy(); } // 清除舊圖表
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '真實儲蓄 (已完成)',
+                            data: dataActual,
+                            borderColor: '#2980b9',
+                            backgroundColor: 'rgba(41, 128, 185, 0.2)',
+                            fill: true,
+                            tension: 0.1,
+                            borderWidth: 3
+                        },
+                        {
+                            label: '未來推演 (預測)',
+                            data: dataProjected,
+                            borderColor: '#e67e22',
+                            borderDash: [5, 5], // 虛線設定
+                            fill: false,
+                            tension: 0.1,
+                            borderWidth: 2
+                        },
+                        {
+                            label: '89萬 WRX 戰備金目標',
+                            data: dataTarget,
+                            borderColor: '#e74c3c',
+                            borderDash: [2, 2],
+                            pointRadius: 0,
+                            fill: false,
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { beginAtZero: true, suggestedMax: 900000 }
+                    }
+                }
+            });
+        }
+
+        // --- 系統啟動初始化 ---
+        window.onload = function() {
+            updateSimulation();
+        };
     </script>
 </body>
 </html>
