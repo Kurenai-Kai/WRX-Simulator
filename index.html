@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>純白意志：WRX VB 戰備金模擬器</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,00,0,0.1); margin-bottom: 20px; }
+        h1 { text-align: center; color: #2c3e50; }
+        .result-box { display: flex; justify-content: space-around; background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 1.2em; color: #0056b3; }
+        .control-group { margin-bottom: 15px; }
+        label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>🏎️ WRX VB 戰備金模擬器</h1>
+
+    <div class="card result-box">
+        <div>每月淨存：<span id="netSavingsDisplay">30,500</span> 元</div>
+        <div>預計達標：<span id="monthsToTargetDisplay">29.2</span> 個月</div>
+    </div>
+
+    <div class="card">
+        <div class="control-group">
+            <label>打工月薪 <span id="valIncome">30,000 元</span></label>
+            <input type="range" id="inputIncome" min="20000" max="50000" step="1000" value="30000">
+        </div>
+        <div class="control-group">
+            <label>每月租金收入 <span id="valRent">10,500 元</span></label>
+            <input type="range" id="inputRent" min="0" max="20000" step="500" value="10500">
+        </div>
+        <div class="control-group">
+            <label>每月生活開銷 <span id="valExpenses">10,000 元</span></label>
+            <input type="range" id="inputExpenses" min="5000" max="20000" step="1000" value="10000">
+        </div>
+    </div>
+
+    <div class="card">
+        <canvas id="savingsChart"></canvas>
+    </div>
+
+    <script>
+        const targetFund = 890000;
+        let chartInstance = null;
+
+        const inputs = {
+            income: document.getElementById('inputIncome'),
+            rent: document.getElementById('inputRent'),
+            expenses: document.getElementById('inputExpenses')
+        };
+
+        const displays = {
+            income: document.getElementById('valIncome'),
+            rent: document.getElementById('valRent'),
+            expenses: document.getElementById('valExpenses'),
+            net: document.getElementById('netSavingsDisplay'),
+            months: document.getElementById('monthsToTargetDisplay')
+        };
+
+        function updateDashboard() {
+            const income = parseInt(inputs.income.value);
+            const rent = parseInt(inputs.rent.value);
+            const expenses = parseInt(inputs.expenses.value);
+
+            displays.income.innerText = income.toLocaleString() + ' 元';
+            displays.rent.innerText = rent.toLocaleString() + ' 元';
+            displays.expenses.innerText = expenses.toLocaleString() + ' 元';
+
+            const netSavings = income + rent - expenses;
+            displays.net.innerText = netSavings.toLocaleString();
+
+            const months = netSavings > 0 ? (targetFund / netSavings).toFixed(1) : '∞';
+            displays.months.innerText = months;
+
+            updateChart(netSavings);
+        }
+
+        function updateChart(netSavings) {
+            const labels = [];
+            const data = [];
+            const targetData = [];
+            let currentFund = 0;
+
+            for (let i = 1; i <= 40; i++) {
+                labels.push('第 ' + i + ' 個月');
+                currentFund += netSavings;
+                data.push(currentFund);
+                targetData.push(targetFund);
+            }
+
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = data;
+                chartInstance.update();
+            } else {
+                const ctx = document.getElementById('savingsChart').getContext('2d');
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '累積資金 (元)',
+                            data: data,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }, {
+                            label: '89萬 WRX 戰備金目標',
+                            data: targetData,
+                            borderColor: '#dc3545',
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                });
+            }
+        }
+
+        Object.values(inputs).forEach(input => input.addEventListener('input', updateDashboard));
+        updateDashboard(); // Initial load
+    </script>
+</body>
+</html>
